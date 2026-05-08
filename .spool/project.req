@@ -1,0 +1,143 @@
+# .spool/project/project.req
+
+feature: PROJECT
+
+requirements:
+
+  - id: PROJECT-1
+    title: Absolute Project Path Required
+    description: >
+      Tool calls must accept the project argument as an absolute
+      filesystem path; relative paths must be rejected with the
+      invalid_project error category defined in SERVER-3.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-04
+    rationale: >
+      The MCP server's working directory is unrelated to the
+      agent's working directory, so a relative path has no
+      reliable anchor. Requiring absolute paths makes the
+      contract unambiguous and forces the calling agent to
+      resolve the path itself, where it has the context to
+      do so correctly.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: PROJECT-1-1
+        title: Absolute Path Accepted
+        description: >
+          Given a tool call with an absolute path that resolves
+          to a directory containing a valid .spool.yaml,
+          when the tool is invoked,
+          then the tool runs the Spool pipeline against that
+          project and returns a successful result.
+
+      - id: PROJECT-1-2
+        title: Relative Path Rejected
+        description: >
+          Given a tool call with a relative path,
+          when the tool is invoked,
+          then the response is an error with category
+          invalid_project and a message identifying that the
+          path must be absolute.
+
+  - id: PROJECT-2
+    title: Fresh Index Per Call
+    description: >
+      Every tool call must rebuild the traceability index from
+      the project's current on-disk contents; no state may carry
+      across calls.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-04
+    rationale: >
+      Caching across calls would require invalidation logic
+      tied to filesystem mtimes or file watchers, neither of
+      which are robust across agent edit patterns or git
+      operations. Rebuilding every call keeps the server
+      stateless, matches Spool's own model, and removes a class
+      of staleness bugs entirely. If profiling later shows that
+      coverage runs are a measurable cost, caching can be
+      revisited with concrete numbers in hand.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: PROJECT-2-1
+        title: Req File Change Reflected
+        description: >
+          Given a tool call followed by a modification to a
+          .req file in the project,
+          when a subsequent tool call is made,
+          then the result reflects the modified contents.
+
+      - id: PROJECT-2-2
+        title: New Test File Reflected
+        description: >
+          Given a tool call followed by the addition of a new
+          test file containing a Spool annotation,
+          when a subsequent tool call is made,
+          then the new annotation appears in the result.
+
+      - id: PROJECT-2-3
+        title: Deleted Requirement Reflected
+        description: >
+          Given a tool call followed by deletion of a .req file,
+          when a subsequent tool call is made,
+          then no requirement or AC from the deleted file
+          appears in the result.
+
+  - id: PROJECT-3
+    title: Project Loading Diagnostics
+    description: >
+      Non-fatal parse and scan warnings produced while loading
+      a project must be returned alongside the tool's result; a
+      malformed .spool.yaml is fatal and returns a dedicated
+      error category.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-04
+    rationale: >
+      Spool already distinguishes between fatal pipeline failure
+      (the project cannot be loaded at all) and per-file warnings
+      (a single .req or test file could not be processed but the
+      rest of the pipeline ran). Carrying that distinction
+      through to the MCP response lets agents act on partial
+      results rather than treating any diagnostic as a hard
+      failure.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: PROJECT-3-1
+        title: Parse Warnings Surfaced
+        description: >
+          Given a project containing one malformed .req file
+          and other valid .req files,
+          when a tool is invoked,
+          then the response contains a successful result drawn
+          from the valid files together with a warning entry
+          identifying the malformed file.
+
+      - id: PROJECT-3-2
+        title: Scan Warnings Surfaced
+        description: >
+          Given a project where one matched test file cannot
+          be read,
+          when a tool is invoked,
+          then the response contains a successful result drawn
+          from the readable files together with a warning entry
+          identifying the unreadable file.
+
+      - id: PROJECT-3-3
+        title: Invalid Config Is Fatal
+        description: >
+          Given a project whose .spool.yaml exists but is not
+          valid YAML or is missing required fields,
+          when a tool is invoked,
+          then the response is an error with category
+          invalid_config and a message describing the problem.
