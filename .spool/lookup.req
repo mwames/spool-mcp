@@ -1,0 +1,210 @@
+# .spool/lookup/lookup.req
+
+feature: LOOKUP
+
+requirements:
+
+  - id: LOOKUP-1
+    title: Requirement Lookup by ID
+    description: >
+      The get_requirement tool must return a single requirement
+      identified by its Spool ID, including its acceptance
+      criteria and the tests linked to each AC.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-06
+    rationale: >
+      Looking up a single requirement is the agent's primary
+      entry point when it is about to write or modify code that
+      should satisfy a known ID. Returning the full requirement
+      with its ACs and linked tests in one call lets the agent
+      see the requirement, its acceptance bar, and the existing
+      test surface without follow-up calls.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: LOOKUP-1-1
+        title: Known Requirement Returned
+        description: >
+          Given a Spool ID matching a requirement in the
+          project,
+          when get_requirement is invoked,
+          then the result includes the requirement's id, title,
+          description, status, feature, source file, and its
+          acceptance criteria, with each AC carrying its
+          linked tests as function name, file, and line.
+
+      - id: LOOKUP-1-2
+        title: Unknown ID Returns Null
+        description: >
+          Given a syntactically valid Spool ID that does not
+          match any requirement in the project,
+          when get_requirement is invoked,
+          then the result is null and no error is returned.
+
+      - id: LOOKUP-1-3
+        title: AC ID Returns Null
+        description: >
+          Given an ID that matches an acceptance criterion but
+          not a requirement,
+          when get_requirement is invoked,
+          then the result is null and no error is returned.
+
+  - id: LOOKUP-2
+    title: Acceptance Criterion Lookup by ID
+    description: >
+      The get_acceptance_criterion tool must return a single
+      AC identified by its Spool ID, including a summary of
+      its parent requirement and any tests linked to it.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-06
+    rationale: >
+      Acceptance criteria are the units of behavior tests
+      annotate, so an agent writing or reviewing a test will
+      most often start from an AC ID rather than a requirement
+      ID. Including the parent requirement summary in the
+      response lets the agent understand the AC's context
+      without a second call.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: LOOKUP-2-1
+        title: Known AC Returned
+        description: >
+          Given a Spool ID matching an acceptance criterion in
+          the project,
+          when get_acceptance_criterion is invoked,
+          then the result includes the AC's id, title,
+          description, parent requirement id, parent requirement
+          title, feature, source file, and its linked tests as
+          function name, file, and line.
+
+      - id: LOOKUP-2-2
+        title: Unknown ID Returns Null
+        description: >
+          Given a syntactically valid Spool ID that does not
+          match any acceptance criterion in the project,
+          when get_acceptance_criterion is invoked,
+          then the result is null and no error is returned.
+
+      - id: LOOKUP-2-3
+        title: Requirement ID Returns Null
+        description: >
+          Given an ID that matches a requirement but not an
+          acceptance criterion,
+          when get_acceptance_criterion is invoked,
+          then the result is null and no error is returned.
+
+  - id: LOOKUP-3
+    title: Requirement Listing
+    description: >
+      The list_requirements tool must return summaries of every
+      requirement in the project, optionally narrowed by feature
+      and status, without inlining acceptance criteria.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-06
+    rationale: >
+      A listing tool is the agent's discovery mechanism — it is
+      how a fresh agent learns what exists in the project. The
+      filters mirror the two dimensions agents most often want
+      to slice on. Acceptance criteria are deliberately omitted
+      from the listing because including them turns this into
+      an unbounded payload on any non-trivial project; agents
+      that need ACs should follow up with get_requirement on
+      specific IDs.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: LOOKUP-3-1
+        title: All Requirements Listed
+        description: >
+          Given a tool call with no filters,
+          when list_requirements is invoked,
+          then the result contains an entry for every
+          requirement in the project, each with id, title,
+          status, feature, and source file.
+
+      - id: LOOKUP-3-2
+        title: Feature Filter Narrows
+        description: >
+          Given a tool call with a feature argument,
+          when list_requirements is invoked,
+          then the result is limited to requirements whose
+          feature matches the argument.
+
+      - id: LOOKUP-3-3
+        title: Status Filter Narrows
+        description: >
+          Given a tool call with a status argument,
+          when list_requirements is invoked,
+          then the result is limited to requirements whose
+          status matches the argument.
+
+      - id: LOOKUP-3-4
+        title: ACs Not Inlined
+        description: >
+          Given any tool call,
+          when list_requirements is invoked,
+          then no acceptance criteria are inlined in the
+          returned entries.
+
+      - id: LOOKUP-3-5
+        title: Stable Ordering
+        description: >
+          Given any tool call,
+          when list_requirements is invoked,
+          then the result is sorted by requirement id so that
+          repeated calls against the same project state return
+          entries in the same order.
+
+  - id: LOOKUP-4
+    title: Feature Listing
+    description: >
+      The list_features tool must return every feature defined
+      in the project together with the number of requirements
+      and acceptance criteria it contains.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-06
+    rationale: >
+      Features are the top-level grouping in Spool's hierarchy
+      and are the natural entry point for an agent that wants to
+      orient itself before drilling into specific requirements.
+      Including counts on each feature lets the agent gauge
+      scope without a follow-up call.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: LOOKUP-4-1
+        title: All Features Listed
+        description: >
+          Given a project with one or more features,
+          when list_features is invoked,
+          then the result contains an entry for every feature
+          with its name, requirement count, and acceptance
+          criterion count.
+
+      - id: LOOKUP-4-2
+        title: Stable Ordering
+        description: >
+          Given a tool call,
+          when list_features is invoked,
+          then the result is sorted alphabetically by feature
+          name.
+
+      - id: LOOKUP-4-3
+        title: Empty Project Returns Empty List
+        description: >
+          Given a project with no .req files,
+          when list_features is invoked,
+          then the result is an empty list and no error.

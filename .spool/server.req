@@ -1,0 +1,158 @@
+# .spool/server/server.req
+
+feature: SERVER
+
+requirements:
+
+  - id: SERVER-1
+    title: Stdio Transport
+    description: >
+      The MCP server must communicate with clients over stdio
+      using the JSON-RPC framing defined by the Model Context
+      Protocol specification.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-04
+    rationale: >
+      Stdio is the canonical MCP transport for locally launched
+      servers and is the only transport coding-agent clients are
+      guaranteed to support. Picking a single transport keeps
+      the server free of network and lifecycle concerns it does
+      not need.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: SERVER-1-1
+        title: Reads Requests from Stdin
+        description: >
+          Given a running server,
+          when a JSON-RPC request is written to its stdin,
+          then the server parses the request and dispatches
+          it to the appropriate handler.
+
+      - id: SERVER-1-2
+        title: Writes Responses to Stdout
+        description: >
+          Given a request that has been dispatched,
+          when the handler produces a response,
+          then the response is written to stdout in the
+          JSON-RPC framing required by MCP.
+
+      - id: SERVER-1-3
+        title: Logs Go to Stderr
+        description: >
+          Given the server is running,
+          when it emits log or diagnostic output,
+          then that output is written to stderr so it does
+          not corrupt the JSON-RPC stream on stdout.
+
+  - id: SERVER-2
+    title: Tool Advertisement
+    description: >
+      The MCP server must advertise the full set of v1 tools in
+      response to the MCP tools/list request, with each tool
+      exposing the input schema clients need to call it.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-04
+    rationale: >
+      Clients discover available tools via tools/list and rely
+      on the advertised input schemas to construct valid calls.
+      Locking the v1 tool set into a single requirement makes
+      the server's contract explicit and makes regressions
+      (a missing or renamed tool) easy to detect.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: SERVER-2-1
+        title: All v1 Tools Listed
+        description: >
+          Given a running server,
+          when the client issues tools/list,
+          then the response includes get_coverage_report,
+          list_untested_acs, list_orphaned_annotations,
+          list_validation_errors, get_requirement,
+          get_acceptance_criterion, list_requirements,
+          and list_features.
+
+      - id: SERVER-2-2
+        title: Each Tool Declares Input Schema
+        description: >
+          Given a running server,
+          when the client issues tools/list,
+          then every advertised tool includes a JSON Schema
+          describing its accepted arguments, including the
+          required project argument.
+
+      - id: SERVER-2-3
+        title: Each Tool Declares a Description
+        description: >
+          Given a running server,
+          when the client issues tools/list,
+          then every advertised tool includes a human-readable
+          description sufficient for an agent to choose between
+          tools without reading external documentation.
+
+  - id: SERVER-3
+    title: Tool Error Response Shape
+    description: >
+      When a tool handler fails, the server must return a
+      structured error response identifying the failure category
+      so that clients can react appropriately rather than
+      surfacing an opaque string.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-05-04
+    rationale: >
+      Coding agents are the primary clients of this server and
+      they recover from failures more reliably when error
+      responses carry a category they can branch on. The
+      categories chosen here mirror the failure modes a Spool
+      project can present: the project argument is bad, the
+      .spool.yaml is missing or malformed, the .req files do not
+      parse, or the requested ID does not exist.
+    superseded_by:
+    acceptance_criteria:
+
+      - id: SERVER-3-1
+        title: Invalid Project Path
+        description: >
+          Given a tool call whose project argument does not
+          resolve to an existing directory,
+          when the tool is invoked,
+          then the response is an error with category
+          "invalid_project" and a message identifying the path.
+
+      - id: SERVER-3-2
+        title: Missing Spool Config
+        description: >
+          Given a tool call whose project resolves to a directory
+          that does not contain a .spool.yaml,
+          when the tool is invoked,
+          then the response is an error with category
+          "missing_config" and a message identifying the path.
+
+      - id: SERVER-3-3
+        title: Unknown ID
+        description: >
+          Given a lookup tool call referencing a Spool ID that
+          does not exist in the project,
+          when the tool is invoked,
+          then the response is a successful result containing
+          a null value, not an error.
+
+      - id: SERVER-3-4
+        title: Unexpected Internal Failure
+        description: >
+          Given a tool call that triggers an unexpected internal
+          error,
+          when the tool is invoked,
+          then the response is an error with category "internal"
+          and a message describing the failure, and the server
+          continues running and accepting subsequent requests.
