@@ -2,11 +2,9 @@ module github.com/mwames/spool-mcp
 
 go 1.26.1
 
-replace github.com/mwames/Spool => /home/matt/repos/spool
-
 require (
 	github.com/modelcontextprotocol/go-sdk v1.6.0
-	github.com/mwames/Spool v0.0.0-00010101000000-000000000000
+	github.com/mwames/Spool v0.0.0-20260508011514-64467a1b3967
 )
 
 require (
