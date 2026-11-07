@@ -6,8 +6,8 @@ github.com/google/jsonschema-go v0.4.3 h1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+
 github.com/google/jsonschema-go v0.4.3/go.mod h1:r5quNTdLOYEz95Ru18zA0ydNbBuYoo9tgaYcxEYhJVE=
 github.com/modelcontextprotocol/go-sdk v1.6.0 h1:PPLS3kn7WtOEnR+Af4X5H96SG0qSab8R/ZQT/HkhPkY=
 github.com/modelcontextprotocol/go-sdk v1.6.0/go.mod h1:kzm3kzFL1/+AziGOE0nUs3gvPoNxMCvkxokMkuFapXQ=
-github.com/mwames/Spool v0.0.0-20261106164633-05c7d6426718 h1:e1PghSIfiC3sfqsYGy4W56q46VKEX6GNy4kuLdce0EM=
-github.com/mwames/Spool v0.0.0-20261106164633-05c7d6426718/go.mod h1:mIgtgNphJ5OUDl5jAsG6d3fZRFIiOYSvWtbxGBgdcTk=
+github.com/mwames/Spool v0.0.0-20261107005629-c92f8ada1284 h1:9E66aBowv59tHB7Q6Z/NT/f0MmO4uERIDUoSADiE21Y=
+github.com/mwames/Spool v0.0.0-20261107005629-c92f8ada1284/go.mod h1:mIgtgNphJ5OUDl5jAsG6d3fZRFIiOYSvWtbxGBgdcTk=
 github.com/segmentio/asm v1.1.3 h1:WM03sfUOENvvKexOLp+pCqgb/WDjsi7EK8gIsICtzhc=
 github.com/segmentio/asm v1.1.3/go.mod h1:Ld3L4ZXGNcSLRg4JBsZ3//1+f/TjYl0Mzen/DQy1EJg=
 github.com/segmentio/encoding v0.5.4 h1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=
