@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/mwames/Spool/api"
 )
 
@@ -332,6 +333,218 @@ func TestCoverage_EmptyValidationErrorsWhenClean(t *testing.T) {
 	}
 }
 
+// COVERAGE-1-1
+func TestCoverage_ExplicitJSONFormatLabelled(t *testing.T) {
+	root := coverageFixture(t)
+	res := callTool(t, "get_coverage_report", map[string]any{"project": root, "format": "json"})
+	var out CoverageReportResult
+	decodeStructured(t, res, &out)
+	if out.Format != "json" {
+		t.Errorf("format = %q, want json", out.Format)
+	}
+	if out.Report == nil {
+		t.Errorf("report is missing for format json")
+	}
+}
+
+// COVERAGE-2-1
+func TestCoverage_TestedActiveACNotListed(t *testing.T) {
+	root := coverageFixture(t)
+	res := callTool(t, "list_untested_acs", map[string]any{"project": root})
+	var out UntestedACsResult
+	decodeStructured(t, res, &out)
+
+	// AUTH-1-1 is active and has a linked test; AUTH-1-2 is active and has none.
+	var found *UntestedACEntry
+	for i := range out.Untested {
+		switch out.Untested[i].ID {
+		case "AUTH-1-1":
+			t.Errorf("AUTH-1-1 (tested) should not appear in untested list: %+v", out.Untested[i])
+		case "AUTH-1-2":
+			found = &out.Untested[i]
+		}
+	}
+	if found == nil {
+		t.Fatalf("AUTH-1-2 not in untested list: %+v", out.Untested)
+	}
+	want := UntestedACEntry{
+		ID:            "AUTH-1-2",
+		Title:         "Bad creds",
+		Description:   "Given bad credentials, login fails.",
+		RequirementID: "AUTH-1",
+		Feature:       "AUTH",
+	}
+	if *found != want {
+		t.Errorf("entry = %+v, want %+v", *found, want)
+	}
+}
+
+// COVERAGE-2-2
+func TestCoverage_DraftDeprecatedAndSupersededACsExcluded(t *testing.T) {
+	root := fixture{
+		Features: []featureDef{{Name: "AUTH", Reqs: []reqDef{
+			{ID: "AUTH-1", Status: "active", ACs: []acDef{
+				{ID: "AUTH-1-1"},
+				{ID: "AUTH-1-2", Status: "draft"},
+				{ID: "AUTH-1-3", Status: "deprecated"},
+			}},
+			{ID: "AUTH-2", Status: "draft", ACs: []acDef{
+				{ID: "AUTH-2-1"},
+			}},
+			{ID: "AUTH-3", Status: "deprecated", ACs: []acDef{
+				{ID: "AUTH-3-1"},
+			}},
+			{ID: "AUTH-4", Status: "superseded", ACs: []acDef{
+				{ID: "AUTH-4-1"},
+				{ID: "AUTH-4-2", Status: "active"},
+			}},
+		}}},
+	}.build(t)
+
+	res := callTool(t, "list_untested_acs", map[string]any{"project": root})
+	var out UntestedACsResult
+	decodeStructured(t, res, &out)
+
+	excluded := map[string]string{
+		"AUTH-1-2": "draft AC",
+		"AUTH-1-3": "deprecated AC",
+		"AUTH-2-1": "AC of a draft requirement",
+		"AUTH-3-1": "AC of a deprecated requirement",
+		"AUTH-4-1": "AC of a superseded requirement",
+		"AUTH-4-2": "active AC of a superseded requirement",
+	}
+	sawActive := false
+	for _, u := range out.Untested {
+		if why, ok := excluded[u.ID]; ok {
+			t.Errorf("%s (%s) should not appear in untested list: %+v", u.ID, why, u)
+		}
+		if u.ID == "AUTH-1-1" {
+			sawActive = true
+		}
+	}
+	if !sawActive {
+		t.Errorf("AUTH-1-1 (active, untested) missing from untested list: %+v", out.Untested)
+	}
+}
+
+// COVERAGE-2-3
+func TestCoverage_FeatureFilterHoldsExactlyThatFeature(t *testing.T) {
+	root := coverageFixture(t)
+	for feature, want := range map[string][]string{
+		"AUTH": {"AUTH-1-2"},
+		"BILL": {"BILL-1-1"},
+	} {
+		res := callTool(t, "list_untested_acs", map[string]any{"project": root, "feature": feature})
+		var out UntestedACsResult
+		decodeStructured(t, res, &out)
+		got := map[string]bool{}
+		for _, u := range out.Untested {
+			got[u.ID] = true
+		}
+		if len(got) != len(want) || len(out.Untested) != len(want) {
+			t.Errorf("feature %s: untested = %+v, want ids %v", feature, out.Untested, want)
+			continue
+		}
+		for _, id := range want {
+			if !got[id] {
+				t.Errorf("feature %s: %s missing from untested list: %+v", feature, id, out.Untested)
+			}
+		}
+	}
+}
+
+// COVERAGE-3-1
+func TestCoverage_OrphanLineIsAnnotationLine(t *testing.T) {
+	root := fixture{
+		Features: []featureDef{{Name: "AUTH", Reqs: []reqDef{
+			{ID: "AUTH-1", ACs: []acDef{{ID: "AUTH-1-1"}}},
+		}}},
+		Tests: []testFile{
+			{Path: "pkg/auth_test.go", Body: goTest("TestGhost", "GHOST-1-1")},
+		},
+	}.build(t)
+
+	res := callTool(t, "list_orphaned_annotations", map[string]any{"project": root})
+	var out OrphanedResult
+	decodeStructured(t, res, &out)
+	if len(out.Orphaned) != 1 {
+		t.Fatalf("Orphaned = %+v, want exactly 1", out.Orphaned)
+	}
+	got := out.Orphaned[0]
+	if filepath.ToSlash(got.File) != "pkg/auth_test.go" && filepath.Clean(got.File) != filepath.Join(root, "pkg", "auth_test.go") {
+		t.Errorf("File = %q, want the test file's path pkg/auth_test.go", got.File)
+	}
+	// goTest writes the package clause, a blank line, the import, a blank
+	// line, then the annotation: line 5.
+	if got.Line != 5 {
+		t.Errorf("Line = %d, want 5", got.Line)
+	}
+}
+
+// COVERAGE-3-3
+func TestCoverage_EmptyOrphanedListIsNotNull(t *testing.T) {
+	root := fixture{
+		Features: []featureDef{{Name: "AUTH", Reqs: []reqDef{
+			{ID: "AUTH-1", ACs: []acDef{{ID: "AUTH-1-1"}}},
+		}}},
+		Tests: []testFile{
+			{Path: "auth_test.go", Body: goTest("TestLogin", "AUTH-1-1")},
+		},
+	}.build(t)
+	res := callTool(t, "list_orphaned_annotations", map[string]any{"project": root})
+	if got := structuredField(t, res, "orphaned"); got != "[]" {
+		t.Errorf("orphaned = %s, want []", got)
+	}
+}
+
+// COVERAGE-4-1
+func TestCoverage_DuplicateRequirementIDInOneMessage(t *testing.T) {
+	root := fixture{
+		Features: []featureDef{{Name: "AUTH", Reqs: []reqDef{
+			{ID: "AUTH-1", ACs: []acDef{{ID: "AUTH-1-1"}}},
+		}}},
+	}.build(t)
+	dup := featureDef{Name: "AUTH", Reqs: []reqDef{
+		{ID: "AUTH-1", ACs: []acDef{{ID: "AUTH-1-2"}}},
+	}}
+	if err := writeReq(root, "auth_dup.req", dup); err != nil {
+		t.Fatalf("write dup .req: %v", err)
+	}
+
+	res := callTool(t, "list_validation_errors", map[string]any{"project": root})
+	var out ValidationResult
+	decodeStructured(t, res, &out)
+	if !anyContainsAll(out.Errors, "AUTH-1", "duplicate") {
+		t.Errorf("expected one message naming AUTH-1 as a duplicate, got %+v", out.Errors)
+	}
+}
+
+// COVERAGE-4-2
+func TestCoverage_DuplicateACIDInOneMessage(t *testing.T) {
+	root := fixture{
+		Features: []featureDef{{Name: "AUTH", Reqs: []reqDef{
+			{ID: "AUTH-1", ACs: []acDef{{ID: "AUTH-1-1"}}},
+			{ID: "AUTH-2", ACs: []acDef{{ID: "AUTH-1-1"}}},
+		}}},
+	}.build(t)
+
+	res := callTool(t, "list_validation_errors", map[string]any{"project": root})
+	var out ValidationResult
+	decodeStructured(t, res, &out)
+	if !anyContainsAll(out.Errors, "AUTH-1-1", "duplicate") {
+		t.Errorf("expected one message naming AUTH-1-1 as a duplicate, got %+v", out.Errors)
+	}
+}
+
+// COVERAGE-4-4
+func TestCoverage_EmptyValidationErrorsIsNotNull(t *testing.T) {
+	root := coverageFixture(t)
+	res := callTool(t, "list_validation_errors", map[string]any{"project": root})
+	if got := structuredField(t, res, "errors"); got != "[]" {
+		t.Errorf("errors = %s, want []", got)
+	}
+}
+
 // helpers
 
 func jsonEqual(t *testing.T, got any, want []byte) bool {
@@ -359,4 +572,45 @@ func anyContains(errs []ValidationEntry, substr string) bool {
 
 func writeReq(root, filename string, feat featureDef) error {
 	return os.WriteFile(filepath.Join(root, ".spool", filename), []byte(renderReqFile(feat)), 0o644)
+}
+
+// anyContainsAll reports whether a single message contains every substring,
+// ignoring case.
+func anyContainsAll(errs []ValidationEntry, substrs ...string) bool {
+	for _, e := range errs {
+		msg := strings.ToLower(e.Message)
+		all := true
+		for _, sub := range substrs {
+			if !strings.Contains(msg, strings.ToLower(sub)) {
+				all = false
+				break
+			}
+		}
+		if all {
+			return true
+		}
+	}
+	return false
+}
+
+// structuredField returns the raw JSON of one field of a successful tool
+// response's structured content, so that null and [] can be told apart.
+func structuredField(t *testing.T, res *mcp.CallToolResult, field string) string {
+	t.Helper()
+	if res.IsError {
+		t.Fatalf("expected success, got error response: %s", textContent(res))
+	}
+	data, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured: %v", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatalf("unmarshal structured: %v\nbody: %s", err, string(data))
+	}
+	raw, ok := fields[field]
+	if !ok {
+		t.Fatalf("structured content has no %q field: %s", field, string(data))
+	}
+	return string(raw)
 }
