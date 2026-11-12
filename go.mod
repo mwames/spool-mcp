@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.6.0
-	github.com/mwames/Spool v0.0.0-20261107174205-8ce39e73c040
+	github.com/mwames/Spool v0.0.0-20261112174328-3bedb6b90594
 )
 
 require (
