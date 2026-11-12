@@ -1,0 +1,210 @@
+# .spool/coverage.req
+
+feature: COVERAGE
+
+requirements:
+
+  - id: COVERAGE-1
+    title: Coverage Report
+    description: >
+      The get_coverage_report tool must return Spool's coverage report
+      for the project, as JSON by default or as text or markdown.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-11-12
+    rationale: >
+      An agent checking a project's traceability wants the same report
+      a developer gets from the spool command, not a second rendering
+      of it that can drift. The tool passes Spool's own formatters
+      through: JSON as a structured object an agent can read without
+      parsing text, and text or markdown as Spool prints them. The
+      coverage tools and their tests shipped in v1 without this spec;
+      it is written from what they do.
+    superseded_by:
+    out_of_scope:
+      - Coverage for listed IDs (spool --ids)
+      - Reporting on part of a project
+    acceptance_criteria:
+
+      - id: COVERAGE-1-1
+        title: JSON by Default
+        description: >
+          Given a project and no format, or format json,
+          when get_coverage_report is invoked,
+          then the result has format "json" and a report object equal
+          to the JSON report Spool produces for that project.
+
+      - id: COVERAGE-1-2
+        title: Text Format
+        description: >
+          Given format text,
+          when get_coverage_report is invoked,
+          then the result has format "text" and text holding Spool's
+          text report for the project exactly.
+
+      - id: COVERAGE-1-3
+        title: Markdown Format
+        description: >
+          Given format markdown,
+          when get_coverage_report is invoked,
+          then the result has format "markdown" and text holding
+          Spool's markdown report for the project exactly.
+
+      - id: COVERAGE-1-4
+        title: Unknown Format Rejected
+        description: >
+          Given any other format,
+          when get_coverage_report is invoked,
+          then the response is an error with category
+          "invalid_arguments" and a message naming json, text and
+          markdown.
+
+  - id: COVERAGE-2
+    title: Untested AC Listing
+    description: >
+      The list_untested_acs tool must list the project's active ACs
+      that have no linked test, optionally narrowed to one feature.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-11-12
+    rationale: >
+      This is the agent's to-do list: what it can work through without
+      reading the whole report. An AC counts when Spool counts it, so
+      the list follows Spool's per-item status (SPEC-4-5 in Spool):
+      draft and deprecated ACs, and every AC of a superseded
+      requirement, are left out, because they aren't expected to have
+      tests. Each entry carries the AC's text so the agent can act on
+      it without a lookup.
+    superseded_by:
+    out_of_scope:
+      - Untested invariants
+      - Ordering of the list
+      - Filtering by requirement or status
+    acceptance_criteria:
+
+      - id: COVERAGE-2-1
+        title: Untested Active AC Listed
+        description: >
+          Given an active AC with no linked test, and an active AC
+          with one,
+          when list_untested_acs is invoked,
+          then the untested list includes the first with its id,
+          title, description, requirement_id and feature, and doesn't
+          include the second.
+
+      - id: COVERAGE-2-2
+        title: Non-Active ACs Excluded
+        description: >
+          Given untested ACs that are draft or deprecated, or that
+          belong to a superseded requirement,
+          when list_untested_acs is invoked,
+          then none of them is in the untested list.
+
+      - id: COVERAGE-2-3
+        title: Feature Filter Applied
+        description: >
+          Given untested ACs in more than one feature and a feature
+          argument,
+          when list_untested_acs is invoked,
+          then the untested list holds only that feature's untested
+          ACs.
+
+  - id: COVERAGE-3
+    title: Orphaned Annotation Listing
+    description: >
+      The list_orphaned_annotations tool must list the test annotations
+      that name a Spool ID no .req file defines.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-11-12
+    rationale: >
+      An orphaned annotation is a broken link: a typo, a deleted
+      requirement, or a test written ahead of its spec. Giving the file
+      and line lets an agent go straight to it.
+    superseded_by:
+    out_of_scope:
+      - Suggesting the ID an orphan was meant to be
+    acceptance_criteria:
+
+      - id: COVERAGE-3-1
+        title: Orphan Reported
+        description: >
+          Given a test annotated with an ID that no .req file defines,
+          when list_orphaned_annotations is invoked,
+          then the orphaned list holds an entry with that ID, the test
+          file's path and the annotation's line.
+
+      - id: COVERAGE-3-2
+        title: Known ID Not Reported
+        description: >
+          Given a test annotated with an ID that a .req file defines,
+          when list_orphaned_annotations is invoked,
+          then that annotation is not in the orphaned list.
+
+      - id: COVERAGE-3-3
+        title: Empty Orphaned List
+        description: >
+          Given a project with no orphaned annotations,
+          when list_orphaned_annotations is invoked,
+          then the result is a success whose orphaned list is empty,
+          not null.
+
+  - id: COVERAGE-4
+    title: Validation Error Listing
+    description: >
+      The list_validation_errors tool must list the errors Spool finds
+      when it indexes the project's .req files.
+    status: active
+    deciders:
+      - Matt Ames
+    consulted: []
+    date: 2026-11-12
+    rationale: >
+      Duplicate IDs and IDs that don't match their file's feature make
+      the traceability graph ambiguous, and Spool reports them as index
+      errors rather than failing. Listing them lets an agent fix the
+      specs before trusting anything else the tools return.
+    superseded_by:
+    out_of_scope:
+      - Parse warnings for malformed .req files (PROJECT-3)
+      - Structured fields beyond the message
+    acceptance_criteria:
+
+      - id: COVERAGE-4-1
+        title: Duplicate Requirement ID
+        description: >
+          Given two .req files that both define the same requirement
+          ID,
+          when list_validation_errors is invoked,
+          then the errors list has a message naming that ID as a
+          duplicate.
+
+      - id: COVERAGE-4-2
+        title: Duplicate AC ID
+        description: >
+          Given two requirements that both define the same AC ID,
+          when list_validation_errors is invoked,
+          then the errors list has a message naming that ID as a
+          duplicate.
+
+      - id: COVERAGE-4-3
+        title: Prefix Mismatch
+        description: >
+          Given a .req file whose feature doesn't match the prefix of
+          a requirement ID in it,
+          when list_validation_errors is invoked,
+          then the errors list has a message naming that ID.
+
+      - id: COVERAGE-4-4
+        title: Clean Project
+        description: >
+          Given a project with no duplicate IDs or prefix mismatches,
+          when list_validation_errors is invoked,
+          then the result is a success whose errors list is empty, not
+          null.
