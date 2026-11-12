@@ -188,10 +188,10 @@ type GetRequirementArgs struct {
 }
 
 type ACEntry struct {
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Tests       []TestRef  `json:"tests"`
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Tests       []TestRef `json:"tests"`
 }
 
 type TestRef struct {
@@ -254,13 +254,13 @@ type ParentRequirement struct {
 }
 
 type ACDetailEntry struct {
-	ID                  string             `json:"id"`
-	Title               string             `json:"title"`
-	Description         string             `json:"description"`
-	Feature             string             `json:"feature"`
-	SourceFile          string             `json:"source_file"`
-	ParentRequirement   *ParentRequirement `json:"parent_requirement"`
-	Tests               []TestRef          `json:"tests"`
+	ID                string             `json:"id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	Feature           string             `json:"feature"`
+	SourceFile        string             `json:"source_file"`
+	ParentRequirement *ParentRequirement `json:"parent_requirement"`
+	Tests             []TestRef          `json:"tests"`
 }
 
 type GetACResult struct {

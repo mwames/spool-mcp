@@ -15,6 +15,7 @@ import (
 // acDef describes a single acceptance criterion in a fixture project.
 type acDef struct {
 	ID, Title, Description string
+	Status                 string // optional; empty means the AC takes its requirement's
 }
 
 // reqDef describes a single requirement in a fixture project.
@@ -131,6 +132,9 @@ func renderReqFile(feat featureDef) string {
 			fmt.Fprintf(&sb, "      - id: %s\n", ac.ID)
 			fmt.Fprintf(&sb, "        title: %s\n", acTitle)
 			fmt.Fprintf(&sb, "        description: %s\n", acDesc)
+			if ac.Status != "" {
+				fmt.Fprintf(&sb, "        status: %s\n", ac.Status)
+			}
 		}
 	}
 	return sb.String()
